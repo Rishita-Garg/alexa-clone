@@ -1,6 +1,4 @@
-Here’s a **cute and clean README** for your **Alexa-Clone project**! ✨  
 
----
 
 # 🦋 Alexa-Clone: Your AI-Powered Personal Assistant 💜  
 
