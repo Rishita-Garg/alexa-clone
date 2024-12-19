@@ -1,37 +1,42 @@
+import streamlit as st
 import speech_recognition as sr
 import pyttsx3
+import threading
 import datetime
 import wikipedia
 import webbrowser
 import pywhatkit
-import tkinter as tk
-from tkinter import scrolledtext
-from tkinter import messagebox
 
 # Initialize the speech engine
 engine = pyttsx3.init()
 
-# Function to make Alexa speak
+# Set properties for the voice engine (optional, customize as needed)
+engine.setProperty("rate", 150)  # Speed of speech
+engine.setProperty("volume", 1.0)  # Volume (0.0 to 1.0)
+
+# Function to speak text in a separate thread
 def speak(text):
-    engine.say(text)
-    engine.runAndWait()
+    def speak_thread():
+        engine.say(text)
+        engine.runAndWait()
+    thread = threading.Thread(target=speak_thread)
+    thread.start()
 
 # Function to recognize user voice command
 def take_command():
     r = sr.Recognizer()
     with sr.Microphone() as source:
         try:
-            r.pause_threshold = 1
-            status_label.config(text="Listening...", fg="lime")
-            root.update()
+            st.write("Listening...")
             audio = r.listen(source)
             query = r.recognize_google(audio, language="en-in")
-            status_label.config(text=f"You said: {query}", fg="white")
-            root.update()
+            st.write(f"You said: {query}")
             return query.lower()
-        except Exception as e:
-            status_label.config(text="Sorry, I didn't catch that. Can you repeat?", fg="orange")
-            root.update()
+        except sr.UnknownValueError:
+            st.warning("Sorry, I couldn't understand. Please try again.")
+            return None
+        except sr.RequestError:
+            st.error("Could not request results; check your internet connection.")
             return None
 
 # Greet the user
@@ -39,97 +44,73 @@ def greet_user():
     hour = int(datetime.datetime.now().hour)
     if hour >= 0 and hour < 12:
         speak("Good Morning!")
+        st.write("Good Morning!")
     elif hour >= 12 and hour < 18:
         speak("Good Afternoon!")
+        st.write("Good Afternoon!")
     else:
         speak("Good Evening!")
+        st.write("Good Evening!")
     speak("How can I assist you today?")
 
 # Process commands
-def process_command():
+def process_command(query):
+    if 'wikipedia' in query:
+        speak("Searching Wikipedia...")
+        query = query.replace("wikipedia", "")
+        try:
+            results = wikipedia.summary(query, sentences=2)
+            speak("According to Wikipedia:")
+            st.write(f"User: {query}")
+            st.write(f"Assistant: {results}")
+            speak(results)
+        except wikipedia.exceptions.DisambiguationError:
+            st.error("Too many results. Please be more specific.")
+        except wikipedia.exceptions.PageError:
+            st.error(f"No page found for {query}.")
+    
+    elif 'open youtube' in query:
+        speak("Opening YouTube")
+        webbrowser.open("https://youtube.com")
+        st.write("Assistant: Opening YouTube")
+    
+    elif 'open google' in query:
+        speak("Opening Google")
+        webbrowser.open("https://google.com")
+        st.write("Assistant: Opening Google")
+    
+    elif 'time' in query:
+        str_time = datetime.datetime.now().strftime("%H:%M:%S")
+        speak(f"The time is {str_time}")
+        st.write(f"Assistant: The current time is {str_time}")
+    
+    elif 'play' in query:
+        song = query.replace("play", "").strip()
+        speak(f"Playing {song} on YouTube")
+        pywhatkit.playonyt(song)
+        st.write(f"Assistant: Playing {song} on YouTube")
+    
+    elif 'stop' in query or 'exit' in query:
+        speak("Goodbye! Have a great day.")
+        st.write("Assistant Stopped")
+        return False
+    
+    else:
+        speak("I can search that for you!")
+        webbrowser.open(f"https://www.google.com/search?q={query}")
+        st.write(f"Assistant: Searching for {query}")
+    return True
+
+# Streamlit App
+st.title("Alexa Clone")
+st.write("A simple virtual assistant powered by Streamlit")
+
+if st.button("Start Assistant"):
+    greet_user()
     while True:
         query = take_command()
         if query:
-            if 'wikipedia' in query:
-                speak("Searching Wikipedia...")
-                query = query.replace("wikipedia", "")
-                try:
-                    results = wikipedia.summary(query, sentences=2)
-                    speak("According to Wikipedia:")
-                    response_box.insert(tk.END, f"User: {query}\nAssistant: {results}\n\n")
-                    response_box.see(tk.END)
-                    speak(results)
-                except wikipedia.exceptions.DisambiguationError:
-                    response_box.insert(tk.END, f"Assistant: Too many results. Please be more specific.\n\n")
-                except wikipedia.exceptions.PageError:
-                    response_box.insert(tk.END, f"Assistant: No page found for {query}.\n\n")
-            
-            elif 'open youtube' in query:
-                speak("Opening YouTube")
-                webbrowser.open("https://youtube.com")
-                response_box.insert(tk.END, "Assistant: Opening YouTube\n\n")
-            
-            elif 'open google' in query:
-                speak("Opening Google")
-                webbrowser.open("https://google.com")
-                response_box.insert(tk.END, "Assistant: Opening Google\n\n")
-            
-            elif 'time' in query:
-                str_time = datetime.datetime.now().strftime("%H:%M:%S")
-                speak(f"The time is {str_time}")
-                response_box.insert(tk.END, f"Assistant: The current time is {str_time}\n\n")
-            
-            elif 'play' in query:
-                song = query.replace("play", "").strip()
-                speak(f"Playing {song} on YouTube")
-                pywhatkit.playonyt(song)
-                response_box.insert(tk.END, f"Assistant: Playing {song} on YouTube\n\n")
-            
-            elif 'stop' in query or 'exit' in query:
-                speak("Goodbye! Have a great day.")
-                status_label.config(text="Assistant Stopped", fg="red")
-                root.update()
+            if not process_command(query):
                 break
-            
-            else:
-                speak("I can search that for you!")
-                webbrowser.open(f"https://www.google.com/search?q={query}")
-                response_box.insert(tk.END, f"Assistant: Searching for {query}\n\n")
 
-# Start the assistant
-def start_assistant():
-    greet_user()
-    process_command()
-
-# Exit confirmation
-def on_exit():
-    if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
-        root.destroy()
-
-# GUI Setup
-root = tk.Tk()
-root.title("Alexa Clone - Dark Mode")
-root.geometry("900x700")
-root.configure(bg="#2b2b2b")
-
-# GUI Elements
-title_label = tk.Label(root, text="Alexa Clone", font=("Helvetica", 26, "bold"), bg="#2b2b2b", fg="#00FFFF")
-title_label.pack(pady=20)
-
-status_label = tk.Label(root, text="Click Start to Begin", font=("Helvetica", 16), bg="#2b2b2b", fg="white")
-status_label.pack(pady=10)
-
-response_box = scrolledtext.ScrolledText(root, width=75, height=20, bg="#1e1e1e", fg="white", font=("Consolas", 12), wrap=tk.WORD)
-response_box.pack(pady=15)
-
-button_frame = tk.Frame(root, bg="#2b2b2b")
-button_frame.pack(pady=20)
-
-start_button = tk.Button(button_frame, text="Start Assistant", command=start_assistant, font=("Helvetica", 14), bg="#3cb371", fg="white", width=15)
-start_button.grid(row=0, column=0, padx=10)
-
-exit_button = tk.Button(button_frame, text="Exit", command=on_exit, font=("Helvetica", 14), bg="#d9534f", fg="white", width=15)
-exit_button.grid(row=0, column=1, padx=10)
-
-root.protocol("WM_DELETE_WINDOW", on_exit)
-root.mainloop()
+st.warning("Click 'Start Assistant' to begin.")
