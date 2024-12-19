@@ -6,6 +6,7 @@ import webbrowser
 import pywhatkit
 import tkinter as tk
 from tkinter import scrolledtext
+from tkinter import messagebox
 
 # Initialize the speech engine
 engine = pyttsx3.init()
@@ -52,39 +53,44 @@ def process_command():
             if 'wikipedia' in query:
                 speak("Searching Wikipedia...")
                 query = query.replace("wikipedia", "")
-                results = wikipedia.summary(query, sentences=2)
-                speak("According to Wikipedia:")
-                response_box.insert(tk.END, f"User: {query}\nAssistant: {results}\n\n")
-                response_box.see(tk.END)
-                speak(results)
-
+                try:
+                    results = wikipedia.summary(query, sentences=2)
+                    speak("According to Wikipedia:")
+                    response_box.insert(tk.END, f"User: {query}\nAssistant: {results}\n\n")
+                    response_box.see(tk.END)
+                    speak(results)
+                except wikipedia.exceptions.DisambiguationError:
+                    response_box.insert(tk.END, f"Assistant: Too many results. Please be more specific.\n\n")
+                except wikipedia.exceptions.PageError:
+                    response_box.insert(tk.END, f"Assistant: No page found for {query}.\n\n")
+            
             elif 'open youtube' in query:
                 speak("Opening YouTube")
                 webbrowser.open("https://youtube.com")
                 response_box.insert(tk.END, "Assistant: Opening YouTube\n\n")
-
+            
             elif 'open google' in query:
                 speak("Opening Google")
                 webbrowser.open("https://google.com")
                 response_box.insert(tk.END, "Assistant: Opening Google\n\n")
-
+            
             elif 'time' in query:
                 str_time = datetime.datetime.now().strftime("%H:%M:%S")
                 speak(f"The time is {str_time}")
                 response_box.insert(tk.END, f"Assistant: The current time is {str_time}\n\n")
-
+            
             elif 'play' in query:
                 song = query.replace("play", "").strip()
                 speak(f"Playing {song} on YouTube")
                 pywhatkit.playonyt(song)
                 response_box.insert(tk.END, f"Assistant: Playing {song} on YouTube\n\n")
-
+            
             elif 'stop' in query or 'exit' in query:
                 speak("Goodbye! Have a great day.")
                 status_label.config(text="Assistant Stopped", fg="red")
                 root.update()
                 break
-
+            
             else:
                 speak("I can search that for you!")
                 webbrowser.open(f"https://www.google.com/search?q={query}")
@@ -95,29 +101,35 @@ def start_assistant():
     greet_user()
     process_command()
 
+# Exit confirmation
+def on_exit():
+    if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
+        root.destroy()
+
 # GUI Setup
 root = tk.Tk()
 root.title("Alexa Clone - Dark Mode")
-root.geometry("800x600")
+root.geometry("900x700")
 root.configure(bg="#2b2b2b")
 
 # GUI Elements
-title_label = tk.Label(root, text="Alexa Clone", font=("Helvetica", 24, "bold"), bg="#2b2b2b", fg="white")
-title_label.pack(pady=10)
+title_label = tk.Label(root, text="Alexa Clone", font=("Helvetica", 26, "bold"), bg="#2b2b2b", fg="#00FFFF")
+title_label.pack(pady=20)
 
-status_label = tk.Label(root, text="Click Start to Begin", font=("Helvetica", 14), bg="#2b2b2b", fg="white")
-status_label.pack(pady=5)
+status_label = tk.Label(root, text="Click Start to Begin", font=("Helvetica", 16), bg="#2b2b2b", fg="white")
+status_label.pack(pady=10)
 
-response_box = scrolledtext.ScrolledText(root, width=70, height=20, bg="#1e1e1e", fg="white", font=("Helvetica", 12))
-response_box.pack(pady=10)
+response_box = scrolledtext.ScrolledText(root, width=75, height=20, bg="#1e1e1e", fg="white", font=("Consolas", 12), wrap=tk.WORD)
+response_box.pack(pady=15)
 
 button_frame = tk.Frame(root, bg="#2b2b2b")
 button_frame.pack(pady=20)
 
-start_button = tk.Button(button_frame, text="Start Assistant", command=start_assistant, font=("Helvetica", 14), bg="#3cb371", fg="white")
+start_button = tk.Button(button_frame, text="Start Assistant", command=start_assistant, font=("Helvetica", 14), bg="#3cb371", fg="white", width=15)
 start_button.grid(row=0, column=0, padx=10)
 
-exit_button = tk.Button(button_frame, text="Exit", command=root.quit, font=("Helvetica", 14), bg="#d9534f", fg="white")
+exit_button = tk.Button(button_frame, text="Exit", command=on_exit, font=("Helvetica", 14), bg="#d9534f", fg="white", width=15)
 exit_button.grid(row=0, column=1, padx=10)
 
+root.protocol("WM_DELETE_WINDOW", on_exit)
 root.mainloop()
