@@ -2,4 +2,4 @@ streamlit
 pyttsx3
 speechrecognition
 wikipedia
-pywhatkit
+youtube-search-python

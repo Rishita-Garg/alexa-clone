@@ -1,8 +1,3 @@
-import os
-
-# Set a dummy DISPLAY environment variable to avoid the KeyError in a headless environment
-os.environ['DISPLAY'] = ':0'
-
 import streamlit as st
 import speech_recognition as sr
 import pyttsx3
@@ -10,7 +5,7 @@ import threading
 import datetime
 import wikipedia
 import webbrowser
-import pywhatkit
+import youtube_search
 
 # Initialize the speech engine
 engine = pyttsx3.init()
@@ -92,7 +87,9 @@ def process_command(query):
     elif 'play' in query:
         song = query.replace("play", "").strip()
         speak(f"Playing {song} on YouTube")
-        pywhatkit.playonyt(song)
+        results = youtube_search.YoutubeSearch(song, max_results=1).to_dict()
+        video_url = "https://youtube.com" + results[0]['url_suffix']
+        webbrowser.open(video_url)
         st.write(f"Assistant: Playing {song} on YouTube")
     
     elif 'stop' in query or 'exit' in query:
