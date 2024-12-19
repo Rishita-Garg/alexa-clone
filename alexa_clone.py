@@ -1,3 +1,8 @@
+import os
+
+# Set a dummy DISPLAY environment variable to avoid the KeyError in a headless environment
+os.environ['DISPLAY'] = ':0'
+
 import streamlit as st
 import speech_recognition as sr
 import pyttsx3
